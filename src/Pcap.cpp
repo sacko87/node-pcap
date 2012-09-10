@@ -66,6 +66,12 @@ Pcap::FindAllDevices(const Arguments& Args) {
 }
 
 Handle<Value>
+Pcap::LibraryVersion(const Arguments& Args) {
+  HandleScope scope;
+  return scope.Close(String::New(pcap_lib_version()));
+}
+
+Handle<Value>
 Pcap::NtoP(struct sockaddr *SocketAddress) {
   char ipAddress[INET6_ADDRSTRLEN + 1] = { 0 }, *addrPtr = 0;
   socklen_t ipAddressLen = 0;
@@ -93,6 +99,7 @@ Pcap::NtoP(struct sockaddr *SocketAddress) {
 extern "C" void Init(Handle<Object> Target) {
   HandleScope scope;
   Target->Set(String::NewSymbol("FindAllDevices"), FunctionTemplate::New(Pcap::FindAllDevices)->GetFunction());
+  Target->Set(String::NewSymbol("LibraryVersion"), FunctionTemplate::New(Pcap::LibraryVersion)->GetFunction());
 
   Pcap::Init(Target);
 }
