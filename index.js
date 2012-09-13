@@ -1,4 +1,4 @@
-var pcap = require("./build/Release/pcap")
+var binding = require('./build/Release/pcap')
 
-exports.findAllDevices = pcap.FindAllDevices;
-exports.libraryVersion = pcap.LibraryVersion;
+exports.findAllDevices = binding.findAllDevices;
+exports.libraryVersion = binding.libraryVersion;
