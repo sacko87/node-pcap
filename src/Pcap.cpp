@@ -2,11 +2,46 @@
 
 using namespace v8;
 
-Pcap::Pcap() { }
+Pcap::Pcap() :
+  pcapHandle_(NULL)
+{ }
 
 void
-Pcap::Init(Handle<Object> Target) {
+Pcap::Init(Handle<Object> target) {
   HandleScope scope;
+
+  Local<FunctionTemplate> functionTemplate = FunctionTemplate::New(Pcap::New);
+  functionTemplate->SetClassName(String::NewSymbol("Pcap"));
+  functionTemplate->InstanceTemplate()->SetInternalFieldCount(1);
+
+  NODE_SET_PROTOTYPE_METHOD(functionTemplate, "close", Pcap::Close);
+  
+  target->Set(String::NewSymbol("Pcap"),
+      Persistent<FunctionTemplate>::New(functionTemplate)->GetFunction());
+}
+
+Handle<Value>
+Pcap::New(const Arguments& args) {
+  HandleScope scope;
+
+  Pcap *wrap = new Pcap();
+  wrap->Wrap(args.This());
+
+  return args.This();
+}
+
+Handle<Value>
+Pcap::Close(const Arguments& args) {
+  HandleScope scope;
+
+  UNWRAP(Pcap);
+  // do we have a handle?
+  if(wrap->pcapHandle_ != NULL) {
+    // close it preventing anything else.
+    pcap_close(wrap->pcapHandle_);
+  }
+
+  return scope.Close(Undefined());
 }
 
 Handle<Value>
@@ -116,7 +151,6 @@ Pcap::NtoP(struct sockaddr *socketAddress) {
     addrPtr = (char*) &(sockAddr6->sin6_addr);
   }
 
-  
   // is it /AF_INET(6)?/?
   if(addrPtr != NULL) {
     // attempt to get the string representation of an ip address

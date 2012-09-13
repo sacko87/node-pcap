@@ -21,6 +21,24 @@ public:
 
 
   /**
+    \brief Create a new, wrapped, instance of Pcap.
+
+    \param[in] args                 The arguments passed via Node.
+    \return                         The wrapped instance of Pcap.
+   */
+  static v8::Handle<v8::Value> New(const v8::Arguments& args);
+
+
+  /**
+    \brief Close and cleanup the PCAP handle.
+    
+    \param[in] args                   The arguments passed via Node.
+    \retval v8::Handle<v8::Primitive> v8::Undefined()
+   */
+  static v8::Handle<v8::Value> Close(const v8::Arguments& args);
+
+
+  /**
     \brief A binding for pcap_findalldevs(3).
 
     The JavaScript object returned has the same structure as the actual result of
@@ -45,6 +63,12 @@ private:
     \brief Initialise any required attributes.
    */
   Pcap();
+
+
+  /**
+    \brief A PCAP handle.
+   */
+  pcap_t *pcapHandle_;
 
 
   /**
