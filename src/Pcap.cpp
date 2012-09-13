@@ -90,7 +90,7 @@ Pcap::LibraryVersion(const Arguments& args) {
   return scope.Close(String::New(pcap_lib_version()));
 }
 
-NODE_EXTERN Handle<Value>
+Handle<Value>
 Pcap::NtoP(struct sockaddr *socketAddress) {
   // get some space for the ip address and a pointer for the address structure
   char ipAddress[INET6_ADDRSTRLEN + 1] = { 0 }, *addrPtr = NULL;
