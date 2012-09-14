@@ -30,6 +30,15 @@ public:
 
 
   /**
+    \brief Set the filter for this PCAP handle.
+    
+    \param[in] args                 The arguments passed via Node.
+    \retval v8::Handle<v8::Boolean> Whether the filter has been set successfully.
+   */
+  static v8::Handle<v8::Value> SetFilter(const v8::Arguments& args);
+
+
+  /**
     \brief Close and cleanup the PCAP handle.
     
     \param[in] args                   The arguments passed via Node.

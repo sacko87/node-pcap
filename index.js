@@ -14,6 +14,12 @@ Pcap.prototype._healthCheck = function() {
     throw new Error('Not running');
 };
 
+Pcap.prototype.setFilter = function(filter) {
+  this._healthCheck();
+  if(typeof filter == 'string')
+    this._handle.setFilter(filter)
+}
+
 Pcap.prototype.close = function() {
   this._healthCheck();
   this._handle.close();

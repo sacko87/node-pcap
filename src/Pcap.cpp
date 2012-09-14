@@ -14,6 +14,7 @@ Pcap::Init(Handle<Object> target) {
   functionTemplate->SetClassName(String::NewSymbol("Pcap"));
   functionTemplate->InstanceTemplate()->SetInternalFieldCount(1);
 
+  NODE_SET_PROTOTYPE_METHOD(functionTemplate, "setFilter", Pcap::SetFilter);
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "close", Pcap::Close);
   
   target->Set(String::NewSymbol("Pcap"),
@@ -28,6 +29,40 @@ Pcap::New(const Arguments& args) {
   wrap->Wrap(args.This());
 
   return args.This();
+}
+
+Handle<Value>
+Pcap::SetFilter(const Arguments& args) {
+  HandleScope scope;
+
+  if(args.Length() != 1 && !args[0]->IsString())
+    return ThrowException(Exception::TypeError(String::New("SetFilter() was expecting a string.")));
+
+  // get the filter string from arguments passed
+  String::Utf8Value filterString(args[0]->ToString());
+
+  UNWRAP(Pcap);
+
+  // do we have a handle?
+  if(wrap->pcapHandle_ != NULL) {
+    // the compiled filter
+    struct bpf_program compiledFilter;
+    // attempt to compile the filter
+    if(pcap_compile(wrap->pcapHandle_, &compiledFilter, *filterString, 1, PCAP_NETMASK_UNKNOWN) == 0) {
+      // attempt to set the filter
+      bool filterApplied = pcap_setfilter(wrap->pcapHandle_, &compiledFilter) == 0;
+
+      // free the compiled filter
+      pcap_freecode(&compiledFilter);
+
+      if(!filterApplied) // did we succeed?
+        return ThrowException(Exception::TypeError(String::New(pcap_geterr(wrap->pcapHandle_))));
+    } else {
+      return ThrowException(Exception::TypeError(String::New(pcap_geterr(wrap->pcapHandle_))));
+    }
+  }
+
+  return scope.Close(Undefined());
 }
 
 Handle<Value>
