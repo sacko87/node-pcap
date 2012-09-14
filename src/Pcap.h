@@ -3,8 +3,9 @@
 
 #define BUILDING_NODE_EXTENSION
 #include <node.h>
-#include <pcap/pcap.h>
-#include <netinet/in.h>
+
+struct pcap;
+struct sockaddr;
 
 /**
   \class Pcap "Pcap.h"
@@ -86,7 +87,7 @@ private:
   /**
     \brief A PCAP handle.
    */
-  pcap_t *pcapHandle_;
+  struct pcap *pcapHandle_;
 
 
   /**

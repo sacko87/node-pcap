@@ -1,5 +1,13 @@
 #include "Pcap.h"
 
+#if defined(__APPLE_CC__) || defined(__APPLE__)
+    #include <sys/ioctl.h>
+    #include <net/bpf.h>
+#endif
+
+#include <pcap/pcap.h>
+#include <netinet/in.h>
+
 using namespace v8;
 
 Pcap::Pcap() :
@@ -63,8 +71,23 @@ Pcap::OpenOnline(const Arguments& args) {
     if(wrap->pcapHandle_ == NULL) { // did we succeed?
       return ThrowException(Exception::TypeError(String::New(pcapErrorBuffer)));
     }
+
+    // Work around buffering bug in BPF on OSX 10.6 as of May 19, 2010
+    // This may result in dropped packets under load because it disables the (broken) buffer
+    // http://seclists.org/tcpdump/2010/q1/110
+#if defined(__APPLE_CC__) || defined(__APPLE__)
+    int fd = pcap_get_selectable_fd(wrap->pcapHandle_);
+    int v = 1;
+    ioctl(fd, BIOCIMMEDIATE, &v);
+    // TODO - check return value
+#endif
+
+    // set non blocking mode on
+    if(pcap_setnonblock(wrap->pcapHandle_, 1, pcapErrorBuffer) == -1) {
+      return ThrowException(Exception::Error(String::New(pcapErrorBuffer)));
+    }
   } else {
-    return ThrowException(Exception::TypeError(String::New("Already running.")));
+    return ThrowException(Exception::Error(String::New("Already running.")));
   }
 
   return True();
