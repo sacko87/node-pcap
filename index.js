@@ -5,7 +5,8 @@ function Pcap() {
   events.EventEmitter.call(this);
   this._handle = new binding.Pcap();
   this._handle.owner = this;
-  
+  this.isOpen = false;
+  this.isLive = false; 
 }
 require('util').inherits(Pcap, events.EventEmitter);
 
@@ -25,6 +26,14 @@ Pcap.prototype.close = function() {
   this._handle.close();
   this._handle = null;
   this.emit('close');
+}
+
+exports.createOnlineSession = function(device, promisc) {
+  var session = new Pcap();
+  session._handle.openOnline(device, promisc || false);
+  session.isOpen = true;
+  session.isLive = true;
+  return session;
 }
 
 exports.findAllDevices = binding.findAllDevices;

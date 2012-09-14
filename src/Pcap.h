@@ -30,6 +30,15 @@ public:
 
 
   /**
+    \brief Open a live PCAP session.
+
+    \param[in] args                 The arguments passed via Node.
+    \return                         Whether the capture was opened successfully.
+   */
+  static v8::Handle<v8::Value> OpenOnline(const v8::Arguments& args);
+
+
+  /**
     \brief Set the filter for this PCAP handle.
     
     \param[in] args                 The arguments passed via Node.

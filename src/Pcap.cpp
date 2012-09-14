@@ -14,6 +14,7 @@ Pcap::Init(Handle<Object> target) {
   functionTemplate->SetClassName(String::NewSymbol("Pcap"));
   functionTemplate->InstanceTemplate()->SetInternalFieldCount(1);
 
+  NODE_SET_PROTOTYPE_METHOD(functionTemplate, "openOnline", Pcap::OpenOnline);
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "setFilter", Pcap::SetFilter);
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "close", Pcap::Close);
   
@@ -29,6 +30,44 @@ Pcap::New(const Arguments& args) {
   wrap->Wrap(args.This());
 
   return args.This();
+}
+
+Handle<Value>
+Pcap::OpenOnline(const Arguments& args) {
+  HandleScope scope;
+  // space for the pcap error messages
+  char pcapErrorBuffer[PCAP_ERRBUF_SIZE];
+
+  uint8_t argsLen = args.Length();
+  
+  if(argsLen <= 0 && args[0]->IsString())
+    return ThrowException(Exception::TypeError(String::New("Usage: OpenOnline();")));
+
+  UNWRAP(Pcap);
+
+  // have we already connected?
+  if(wrap->pcapHandle_ == NULL) {
+    // get the device string from arguments passed
+    String::Utf8Value deviceName(args[0]->ToString());
+    bool promiscMode = false;
+    if(argsLen > 1) {
+      if(args[1]->IsBoolean()) {
+        promiscMode = args[1]->ToBoolean()->Value();
+      } else {
+        return ThrowException(Exception::TypeError(String::New("Usage: OpenOnline(); Promiscuouse Mode must be a boolean.")));
+      }
+    }
+      
+    // attempt to open the live capture
+    wrap->pcapHandle_ = pcap_open_live(*deviceName, BUFSIZ, promiscMode, 1000, pcapErrorBuffer);
+    if(wrap->pcapHandle_ == NULL) { // did we succeed?
+      return ThrowException(Exception::TypeError(String::New(pcapErrorBuffer)));
+    }
+  } else {
+    return ThrowException(Exception::TypeError(String::New("Already running.")));
+  }
+
+  return True();
 }
 
 Handle<Value>
