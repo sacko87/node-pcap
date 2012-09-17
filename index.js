@@ -21,6 +21,11 @@ Pcap.prototype.setFilter = function(filter) {
     this._handle.setFilter(filter)
 }
 
+Pcap.prototype.stats = function() {
+  this._healthCheck();
+  return this._handle.stats();
+}
+
 Pcap.prototype.close = function() {
   this._healthCheck();
   this._handle.close();

@@ -24,6 +24,7 @@ Pcap::Init(Handle<Object> target) {
 
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "openOnline", Pcap::OpenOnline);
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "setFilter", Pcap::SetFilter);
+  NODE_SET_PROTOTYPE_METHOD(functionTemplate, "stats", Pcap::Stats);
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "close", Pcap::Close);
   
   target->Set(String::NewSymbol("Pcap"),
@@ -90,7 +91,7 @@ Pcap::OpenOnline(const Arguments& args) {
     return ThrowException(Exception::Error(String::New("Already running.")));
   }
 
-  return True();
+  return scope.Close(True());
 }
 
 Handle<Value>
@@ -122,6 +123,35 @@ Pcap::SetFilter(const Arguments& args) {
     } else {
       return ThrowException(Exception::TypeError(String::New(pcap_geterr(wrap->handle))));
     }
+  }
+
+  return scope.Close(Undefined());
+}
+
+Handle<Value>
+Pcap::Stats(const Arguments& args) {
+  HandleScope scope;
+
+  UNWRAP(Pcap);
+
+  if(wrap->handle != NULL) {
+    struct pcap_stat ps;
+    if(pcap_stats(wrap->handle, &ps) == -1) {
+      return ThrowException(Exception::Error(String::New(pcap_geterr(wrap->handle))));
+    }
+
+    Local<Object> StatsObject = Object::New();
+
+#define X(name) \
+    StatsObject->Set(String::NewSymbol(#name), Integer::NewFromUnsigned(ps.name));
+
+    X(ps_recv)
+    X(ps_drop)
+    X(ps_ifdrop)
+
+#undef X
+
+    return scope.Close(StatsObject);
   }
 
   return scope.Close(Undefined());
@@ -212,7 +242,7 @@ Pcap::FindAllDevices(const Arguments& args) {
     DeviceArray->Set(Integer::New(deviceIndex++), Device);
   }
 
-  return DeviceArray;
+  return scope.Close(DeviceArray);
 }
 
 Handle<Value>

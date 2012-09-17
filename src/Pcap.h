@@ -49,6 +49,18 @@ public:
 
 
   /**
+    \brief Get the statistics from the start of the capture.
+
+    The JavaScript object returned has the same structure as the actual result of
+    pcap_stats(3).
+    
+    \param[in] args                 The arguments passed via Node.
+    \retval v8::Handle<v8::Object>  The result of pcap_findalldevs(3).
+   */
+  static v8::Handle<v8::Value> Stats(const v8::Arguments& args);
+
+
+  /**
     \brief Close and cleanup the PCAP handle.
     
     \param[in] args                   The arguments passed via Node.
