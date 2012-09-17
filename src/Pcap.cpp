@@ -23,6 +23,7 @@ Pcap::Init(Handle<Object> target) {
   functionTemplate->InstanceTemplate()->SetInternalFieldCount(1);
 
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "openOnline", Pcap::OpenOnline);
+  NODE_SET_PROTOTYPE_METHOD(functionTemplate, "openOffline", Pcap::OpenOffline);
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "setFilter", Pcap::SetFilter);
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "stats", Pcap::Stats);
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "close", Pcap::Close);
@@ -69,6 +70,49 @@ Pcap::OpenOnline(const Arguments& args) {
       
     // attempt to open the live capture
     wrap->handle = pcap_open_live(*deviceName, BUFSIZ, promiscMode, 1000, pcapErrorBuffer);
+    if(wrap->handle == NULL) { // did we succeed?
+      return ThrowException(Exception::TypeError(String::New(pcapErrorBuffer)));
+    }
+
+    // Work around buffering bug in BPF on OSX 10.6 as of May 19, 2010
+    // This may result in dropped packets under load because it disables the (broken) buffer
+    // http://seclists.org/tcpdump/2010/q1/110
+#if defined(__APPLE_CC__) || defined(__APPLE__)
+    int fd = pcap_get_selectable_fd(wrap->handle);
+    int v = 1;
+    ioctl(fd, BIOCIMMEDIATE, &v);
+    // TODO - check return value
+#endif
+
+    // set non blocking mode on
+    if(pcap_setnonblock(wrap->handle, 1, pcapErrorBuffer) == -1) {
+      return ThrowException(Exception::Error(String::New(pcapErrorBuffer)));
+    }
+  } else {
+    return ThrowException(Exception::Error(String::New("Already running.")));
+  }
+
+  return scope.Close(True());
+}
+
+Handle<Value>
+Pcap::OpenOffline(const Arguments& args) {
+  HandleScope scope;
+  // space for the pcap error messages
+  char pcapErrorBuffer[PCAP_ERRBUF_SIZE];
+
+  if(!(args.Length() == 1 && args[0]->IsString()))
+    return ThrowException(Exception::TypeError(String::New("Usage: OpenOffline();")));
+
+  UNWRAP(Pcap);
+
+  // have we already connected?
+  if(wrap->handle == NULL) {
+    // get the device string from arguments passed
+    String::Utf8Value fileName(args[0]->ToString());
+
+    // attempt to open the live capture
+    wrap->handle = pcap_open_offline(*fileName, pcapErrorBuffer);
     if(wrap->handle == NULL) { // did we succeed?
       return ThrowException(Exception::TypeError(String::New(pcapErrorBuffer)));
     }
