@@ -87,7 +87,7 @@ private:
   /**
     \brief A PCAP handle.
    */
-  struct pcap *pcapHandle_;
+  struct pcap *handle;
 
 
   /**

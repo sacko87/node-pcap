@@ -1,8 +1,8 @@
 #include "Pcap.h"
 
 #if defined(__APPLE_CC__) || defined(__APPLE__)
-    #include <sys/ioctl.h>
-    #include <net/bpf.h>
+# include <net/bpf.h>
+# include <sys/ioctl.h>
 #endif
 
 #include <pcap/pcap.h>
@@ -11,7 +11,7 @@
 using namespace v8;
 
 Pcap::Pcap() :
-  pcapHandle_(NULL)
+  handle(NULL)
 { }
 
 void
@@ -54,7 +54,7 @@ Pcap::OpenOnline(const Arguments& args) {
   UNWRAP(Pcap);
 
   // have we already connected?
-  if(wrap->pcapHandle_ == NULL) {
+  if(wrap->handle == NULL) {
     // get the device string from arguments passed
     String::Utf8Value deviceName(args[0]->ToString());
     bool promiscMode = false;
@@ -67,8 +67,8 @@ Pcap::OpenOnline(const Arguments& args) {
     }
       
     // attempt to open the live capture
-    wrap->pcapHandle_ = pcap_open_live(*deviceName, BUFSIZ, promiscMode, 1000, pcapErrorBuffer);
-    if(wrap->pcapHandle_ == NULL) { // did we succeed?
+    wrap->handle = pcap_open_live(*deviceName, BUFSIZ, promiscMode, 1000, pcapErrorBuffer);
+    if(wrap->handle == NULL) { // did we succeed?
       return ThrowException(Exception::TypeError(String::New(pcapErrorBuffer)));
     }
 
@@ -76,14 +76,14 @@ Pcap::OpenOnline(const Arguments& args) {
     // This may result in dropped packets under load because it disables the (broken) buffer
     // http://seclists.org/tcpdump/2010/q1/110
 #if defined(__APPLE_CC__) || defined(__APPLE__)
-    int fd = pcap_get_selectable_fd(wrap->pcapHandle_);
+    int fd = pcap_get_selectable_fd(wrap->handle);
     int v = 1;
     ioctl(fd, BIOCIMMEDIATE, &v);
     // TODO - check return value
 #endif
 
     // set non blocking mode on
-    if(pcap_setnonblock(wrap->pcapHandle_, 1, pcapErrorBuffer) == -1) {
+    if(pcap_setnonblock(wrap->handle, 1, pcapErrorBuffer) == -1) {
       return ThrowException(Exception::Error(String::New(pcapErrorBuffer)));
     }
   } else {
@@ -106,21 +106,21 @@ Pcap::SetFilter(const Arguments& args) {
   UNWRAP(Pcap);
 
   // do we have a handle?
-  if(wrap->pcapHandle_ != NULL) {
+  if(wrap->handle != NULL) {
     // the compiled filter
     struct bpf_program compiledFilter;
     // attempt to compile the filter
-    if(pcap_compile(wrap->pcapHandle_, &compiledFilter, *filterString, 1, PCAP_NETMASK_UNKNOWN) == 0) {
+    if(pcap_compile(wrap->handle, &compiledFilter, *filterString, 1, PCAP_NETMASK_UNKNOWN) == 0) {
       // attempt to set the filter
-      bool filterApplied = pcap_setfilter(wrap->pcapHandle_, &compiledFilter) == 0;
+      bool filterApplied = pcap_setfilter(wrap->handle, &compiledFilter) == 0;
 
       // free the compiled filter
       pcap_freecode(&compiledFilter);
 
       if(!filterApplied) // did we succeed?
-        return ThrowException(Exception::TypeError(String::New(pcap_geterr(wrap->pcapHandle_))));
+        return ThrowException(Exception::TypeError(String::New(pcap_geterr(wrap->handle))));
     } else {
-      return ThrowException(Exception::TypeError(String::New(pcap_geterr(wrap->pcapHandle_))));
+      return ThrowException(Exception::TypeError(String::New(pcap_geterr(wrap->handle))));
     }
   }
 
@@ -132,10 +132,10 @@ Pcap::Close(const Arguments& args) {
   HandleScope scope;
 
   UNWRAP(Pcap);
-  // do we have a handle?
-  if(wrap->pcapHandle_ != NULL) {
+
+  if(wrap->handle != NULL) {
     // close it preventing anything else.
-    pcap_close(wrap->pcapHandle_);
+    pcap_close(wrap->handle);
   }
 
   return scope.Close(Undefined());
