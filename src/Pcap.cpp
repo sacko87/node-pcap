@@ -51,52 +51,41 @@ Pcap::New(const Arguments& args) {
 Handle<Value>
 Pcap::OpenOnline(const Arguments& args) {
   HandleScope scope;
+
+  assert(args.Length() > 1);
+  assert(args[0]->IsString());
+
+  UNWRAP(Pcap);
+  assert(wrap->handle == NULL);
+
   // space for the pcap error messages
   char pcapErrorBuffer[PCAP_ERRBUF_SIZE];
 
-  uint8_t argsLen = args.Length();
-  
-  if(argsLen <= 0 && args[0]->IsString())
-    return ThrowException(Exception::TypeError(String::New("Usage: OpenOnline();")));
-
-  UNWRAP(Pcap);
-
-  // have we already connected?
-  if(wrap->handle == NULL) {
-    // get the device string from arguments passed
-    String::Utf8Value deviceName(args[0]->ToString());
-    bool promiscMode = false;
-    if(argsLen > 1) {
-      if(args[1]->IsBoolean()) {
-        promiscMode = args[1]->ToBoolean()->Value();
-      } else {
-        return ThrowException(Exception::TypeError(String::New("Usage: OpenOnline(); Promiscuouse Mode must be a boolean.")));
-      }
-    }
+  // get the device string from arguments passed
+  String::Utf8Value deviceName(args[0]->ToString());
+  bool promiscMode = false;
+  if(args.Length() > 1) {
+    assert(args[1]->IsBoolean());
+    promiscMode = args[1]->ToBoolean()->Value();
+  }
       
-    // attempt to open the live capture
-    wrap->handle = pcap_open_live(*deviceName, BUFSIZ, promiscMode, 1000, pcapErrorBuffer);
-    if(wrap->handle == NULL) { // did we succeed?
-      return ThrowException(Exception::TypeError(String::New(pcapErrorBuffer)));
-    }
+  // attempt to open the live capture
+  wrap->handle = pcap_open_live(*deviceName, BUFSIZ, promiscMode, 1000, pcapErrorBuffer);
+  if(wrap->handle == NULL) // did we succeed?
+    return ThrowException(Exception::Error(String::Concat(String::New("pcap_open_online(): "), String::New(pcapErrorBuffer))));
 
-    // Work around buffering bug in BPF on OSX 10.6 as of May 19, 2010
-    // This may result in dropped packets under load because it disables the (broken) buffer
-    // http://seclists.org/tcpdump/2010/q1/110
+  // Work around buffering bug in BPF on OSX 10.6 as of May 19, 2010
+  // This may result in dropped packets under load because it disables the (broken) buffer
+  // http://seclists.org/tcpdump/2010/q1/110
 #if defined(__APPLE_CC__) || defined(__APPLE__)
-    int fd = pcap_get_selectable_fd(wrap->handle);
-    int v = 1;
-    ioctl(fd, BIOCIMMEDIATE, &v);
-    // TODO - check return value
+  int fd = pcap_get_selectable_fd(wrap->handle);
+  int v = 1;
+  assert(ioctl(fd, BIOCIMMEDIATE, &v) == 0);
 #endif
 
-    // set non blocking mode on
-    if(pcap_setnonblock(wrap->handle, 1, pcapErrorBuffer) == -1) {
-      return ThrowException(Exception::Error(String::New(pcapErrorBuffer)));
-    }
-  } else {
-    return ThrowException(Exception::Error(String::New("Already running.")));
-  }
+  // set non blocking mode on
+  if(pcap_setnonblock(wrap->handle, 1, pcapErrorBuffer) == -1)
+    return ThrowException(Exception::Error(String::Concat(String::New("pcap_setnonblock(): "), String::New(pcapErrorBuffer))));
 
   return scope.Close(True());
 }
@@ -104,42 +93,36 @@ Pcap::OpenOnline(const Arguments& args) {
 Handle<Value>
 Pcap::OpenOffline(const Arguments& args) {
   HandleScope scope;
+
+  assert(args.Length() == 1);
+  assert(args[0]->IsString());
+
+  UNWRAP(Pcap);
+  assert(wrap->handle == NULL);
+
   // space for the pcap error messages
   char pcapErrorBuffer[PCAP_ERRBUF_SIZE];
 
-  if(!(args.Length() == 1 && args[0]->IsString()))
-    return ThrowException(Exception::TypeError(String::New("Usage: OpenOffline();")));
+  // get the device string from arguments passed
+  String::Utf8Value fileName(args[0]->ToString());
 
-  UNWRAP(Pcap);
+  // attempt to open the live capture
+  wrap->handle = pcap_open_offline(*fileName, pcapErrorBuffer);
+  if(wrap->handle == NULL) // did we succeed?
+    return ThrowException(Exception::Error(String::Concat(String::New("pcap_open_offline(): "), String::New(pcapErrorBuffer))));
 
-  // have we already connected?
-  if(wrap->handle == NULL) {
-    // get the device string from arguments passed
-    String::Utf8Value fileName(args[0]->ToString());
-
-    // attempt to open the live capture
-    wrap->handle = pcap_open_offline(*fileName, pcapErrorBuffer);
-    if(wrap->handle == NULL) { // did we succeed?
-      return ThrowException(Exception::TypeError(String::New(pcapErrorBuffer)));
-    }
-
-    // Work around buffering bug in BPF on OSX 10.6 as of May 19, 2010
-    // This may result in dropped packets under load because it disables the (broken) buffer
-    // http://seclists.org/tcpdump/2010/q1/110
+  // Work around buffering bug in BPF on OSX 10.6 as of May 19, 2010
+  // This may result in dropped packets under load because it disables the (broken) buffer
+  // http://seclists.org/tcpdump/2010/q1/110
 #if defined(__APPLE_CC__) || defined(__APPLE__)
-    int fd = pcap_get_selectable_fd(wrap->handle);
-    int v = 1;
-    ioctl(fd, BIOCIMMEDIATE, &v);
-    // TODO - check return value
+  int fd = pcap_get_selectable_fd(wrap->handle);
+  int v = 1;
+  assert(ioctl(fd, BIOCIMMEDIATE, &v) == 0);
 #endif
 
-    // set non blocking mode on
-    if(pcap_setnonblock(wrap->handle, 1, pcapErrorBuffer) == -1) {
-      return ThrowException(Exception::Error(String::New(pcapErrorBuffer)));
-    }
-  } else {
-    return ThrowException(Exception::Error(String::New("Already running.")));
-  }
+  // set non blocking mode on
+  if(pcap_setnonblock(wrap->handle, 1, pcapErrorBuffer) == -1)
+    return ThrowException(Exception::Error(String::Concat(String::New("pcap_setnonblock(): "), String::New(pcapErrorBuffer))));
 
   return scope.Close(True());
 }
@@ -148,32 +131,29 @@ Handle<Value>
 Pcap::SetFilter(const Arguments& args) {
   HandleScope scope;
 
-  if(args.Length() != 1 && !args[0]->IsString())
-    return ThrowException(Exception::TypeError(String::New("SetFilter() was expecting a string.")));
+  assert(args.Length() == 1);
+  assert(args[0]->IsString());
+
+  UNWRAP(Pcap);
+  assert(wrap->handle != NULL);
 
   // get the filter string from arguments passed
   String::Utf8Value filterString(args[0]->ToString());
 
-  UNWRAP(Pcap);
+  // the compiled filter
+  struct bpf_program compiledFilter;
+  // attempt to compile the filter
+  if(pcap_compile(wrap->handle, &compiledFilter, *filterString, 1, PCAP_NETMASK_UNKNOWN) != 0)
+    return ThrowException(Exception::Error(String::Concat(String::New("pcap_compile(): "), String::New(pcap_geterr(wrap->handle)))));
 
-  // do we have a handle?
-  if(wrap->handle != NULL) {
-    // the compiled filter
-    struct bpf_program compiledFilter;
-    // attempt to compile the filter
-    if(pcap_compile(wrap->handle, &compiledFilter, *filterString, 1, PCAP_NETMASK_UNKNOWN) == 0) {
-      // attempt to set the filter
-      bool filterApplied = pcap_setfilter(wrap->handle, &compiledFilter) == 0;
+  // attempt to set the filter
+  bool filterApplied = pcap_setfilter(wrap->handle, &compiledFilter) == 0;
 
-      // free the compiled filter
-      pcap_freecode(&compiledFilter);
+  // free the compiled filter
+  pcap_freecode(&compiledFilter);
 
-      if(!filterApplied) // did we succeed?
-        return ThrowException(Exception::TypeError(String::New(pcap_geterr(wrap->handle))));
-    } else {
-      return ThrowException(Exception::TypeError(String::New(pcap_geterr(wrap->handle))));
-    }
-  }
+  if(!filterApplied) // did we succeed?
+    return ThrowException(Exception::Error(String::Concat(String::New("pcap_setfilter(): "), String::New(pcap_geterr(wrap->handle)))));
 
   return scope.Close(Undefined());
 }
@@ -182,48 +162,39 @@ Handle<Value>
 Pcap::Stats(const Arguments& args) {
   HandleScope scope;
 
+  assert(args.Length() == 0);
+
   UNWRAP(Pcap);
+  assert(wrap->handle != NULL);
 
-  if(wrap->handle != NULL) {
-    struct pcap_stat ps;
-    if(pcap_stats(wrap->handle, &ps) == -1) {
-      return ThrowException(Exception::Error(String::New(pcap_geterr(wrap->handle))));
-    }
+  struct pcap_stat ps;
+  // attempt to get the statistics for this interface
+  if(pcap_stats(wrap->handle, &ps) == -1) // did we succeed?
+    return ThrowException(Exception::Error(String::Concat(String::New("pcap_stats(): "), String::New(pcap_geterr(wrap->handle)))));
 
-    Local<Object> StatsObject = Object::New();
+  Local<Object> StatsObject = Object::New();
 
 #define X(name) \
-    StatsObject->Set(String::NewSymbol(#name), Integer::NewFromUnsigned(ps.name));
+  StatsObject->Set(String::NewSymbol(#name), Integer::NewFromUnsigned(ps.name));
 
-    X(ps_recv)
-    X(ps_drop)
-    X(ps_ifdrop)
+  X(ps_recv)
+  X(ps_drop)
+  X(ps_ifdrop)
 
 #undef X
 
-    return scope.Close(StatsObject);
-  }
-
-  return scope.Close(Undefined());
+  return scope.Close(StatsObject);
 }
 
 Handle<Value>
 Pcap::Inject(const Arguments& args) {
   HandleScope scope;
 
+  assert(args.Length() == 1);
+  assert(Buffer::HasInstance(args[0]));
+
   UNWRAP(Pcap);
-
-  // have we been called correctly?
-  if(args.Length() != 1)
-    return ThrowException(Exception::Error(String::New("inject(): requires only one parameter.")));
-
-  // is the only parameter of the correct type?
-  if(!Buffer::HasInstance(args[0]))
-    return ThrowException(Exception::Error(String::New("inject(): the only parameter should be of type Buffer.")));
-
-  // do we have an interface handle?
-  if(wrap->handle == NULL)
-    return ThrowException(Exception::Error(String::New("inject(): this instance is no longer connected to an interface.")));
+  assert(wrap->handle != NULL);
 
   // the number of bytes put upon the wire
   int bytesSent = 0;
@@ -236,7 +207,7 @@ Pcap::Inject(const Arguments& args) {
   // attempt to get put the message on the wire
   bytesSent = pcap_inject(wrap->handle, buffer, bufferLen);
   if(bytesSent == -1) // did we succeed?
-    return ThrowException(Exception::Error(String::New(pcap_geterr(wrap->handle))));
+    return ThrowException(Exception::Error(String::Concat(String::New("pcap_inject(): "), String::New(pcap_geterr(wrap->handle)))));
 
   return scope.Close(Integer::New(bytesSent));
 }
@@ -246,11 +217,10 @@ Pcap::Close(const Arguments& args) {
   HandleScope scope;
 
   UNWRAP(Pcap);
+  assert(wrap->handle != NULL);
 
-  if(wrap->handle != NULL) {
-    // close it preventing anything else.
-    pcap_close(wrap->handle); wrap->handle = NULL;
-  }
+  // close it preventing anything else.
+  pcap_close(wrap->handle); wrap->handle = NULL;
 
   return scope.Close(Undefined());
 }
@@ -265,9 +235,8 @@ Pcap::FindAllDevices(const Arguments& args) {
   pcap_if_t *allDevices, *currentDevice;
 
   // attempt to get all device information on this host
-  if(pcap_findalldevs(&allDevices, pcapErrorBuffer) == -1 || allDevices == NULL) {
-    return ThrowException(Exception::TypeError(String::New(pcapErrorBuffer)));
-  }
+  if(pcap_findalldevs(&allDevices, pcapErrorBuffer) == -1 || allDevices == NULL)
+    return ThrowException(Exception::Error(String::Concat(String::New("pcap_findalldevs(): "), String::New(pcapErrorBuffer))));
 
   // this is what will be returned
   Local<Array> DeviceArray = Array::New();
