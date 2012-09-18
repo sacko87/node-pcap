@@ -80,7 +80,8 @@ Pcap::OpenOnline(const Arguments& args) {
 #if defined(__APPLE_CC__) || defined(__APPLE__)
   int fd = pcap_get_selectable_fd(wrap->handle);
   int v = 1;
-  assert(ioctl(fd, BIOCIMMEDIATE, &v) == 0);
+  ioctl(fd, BIOCIMMEDIATE, &v);
+  // TODO handle errors
 #endif
 
   // set non blocking mode on
@@ -117,7 +118,8 @@ Pcap::OpenOffline(const Arguments& args) {
 #if defined(__APPLE_CC__) || defined(__APPLE__)
   int fd = pcap_get_selectable_fd(wrap->handle);
   int v = 1;
-  assert(ioctl(fd, BIOCIMMEDIATE, &v) == 0);
+  ioctl(fd, BIOCIMMEDIATE, &v);
+  // TODO handle errors
 #endif
 
   // set non blocking mode on
