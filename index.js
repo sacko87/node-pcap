@@ -26,6 +26,11 @@ Pcap.prototype.stats = function() {
   return this._handle.stats();
 }
 
+Pcap.prototype.inject = function(buffer) {
+  this._healthCheck();
+  return this._handle.inject(buffer);
+}
+
 Pcap.prototype.close = function() {
   this._healthCheck();
   this._handle.close();

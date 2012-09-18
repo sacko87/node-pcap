@@ -58,6 +58,18 @@ public:
 
 
   /**
+    \brief Inject a raw buffer onto the wire.
+
+    The JavaScript object returned has the same structure as the actual result of
+    pcap_inject(3).
+    
+    \param[in] args                 The arguments passed via Node.
+    \retval v8::Handle<v8::Object>  The result of pcap_inject(3).
+   */
+  static v8::Handle<v8::Value> Inject(const v8::Arguments& args);
+
+
+  /**
     \brief Get the statistics from the start of the capture.
 
     The JavaScript object returned has the same structure as the actual result of

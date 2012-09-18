@@ -8,7 +8,10 @@
 #include <pcap/pcap.h>
 #include <netinet/in.h>
 
+#include <node_buffer.h>
+
 using namespace v8;
+using namespace node;
 
 Pcap::Pcap() :
   handle(NULL)
@@ -24,8 +27,11 @@ Pcap::Init(Handle<Object> target) {
 
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "openOnline", Pcap::OpenOnline);
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "openOffline", Pcap::OpenOffline);
+
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "setFilter", Pcap::SetFilter);
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "stats", Pcap::Stats);
+  NODE_SET_PROTOTYPE_METHOD(functionTemplate, "inject", Pcap::Inject);
+
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "close", Pcap::Close);
   
   target->Set(String::NewSymbol("Pcap"),
@@ -202,6 +208,40 @@ Pcap::Stats(const Arguments& args) {
 }
 
 Handle<Value>
+Pcap::Inject(const Arguments& args) {
+  HandleScope scope;
+
+  UNWRAP(Pcap);
+
+  // have we been called correctly?
+  if(args.Length() != 1)
+    return ThrowException(Exception::Error(String::New("inject(): requires only one parameter.")));
+
+  // is the only parameter of the correct type?
+  if(!Buffer::HasInstance(args[0]))
+    return ThrowException(Exception::Error(String::New("inject(): the only parameter should be of type Buffer.")));
+
+  // do we have an interface handle?
+  if(wrap->handle == NULL)
+    return ThrowException(Exception::Error(String::New("inject(): this instance is no longer connected to an interface.")));
+
+  // the number of bytes put upon the wire
+  int bytesSent = 0;
+  // aquire the buffer object
+  Local<Object> bufferObject = args[0]->ToObject();
+  // get it's attributes
+  char *buffer = Buffer::Data(bufferObject);
+  size_t bufferLen = Buffer::Length(bufferObject);
+
+  // attempt to get put the message on the wire
+  bytesSent = pcap_inject(wrap->handle, buffer, bufferLen);
+  if(bytesSent == -1) // did we succeed?
+    return ThrowException(Exception::Error(String::New(pcap_geterr(wrap->handle))));
+
+  return scope.Close(Integer::New(bytesSent));
+}
+
+Handle<Value>
 Pcap::Close(const Arguments& args) {
   HandleScope scope;
 
@@ -209,7 +249,7 @@ Pcap::Close(const Arguments& args) {
 
   if(wrap->handle != NULL) {
     // close it preventing anything else.
-    pcap_close(wrap->handle);
+    pcap_close(wrap->handle); wrap->handle = NULL;
   }
 
   return scope.Close(Undefined());
