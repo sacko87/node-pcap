@@ -80,7 +80,7 @@ Pcap::OpenOnline(const Arguments& args) {
 #if defined(__APPLE_CC__) || defined(__APPLE__)
   int fd = pcap_get_selectable_fd(wrap->handle);
   int v = 1;
-  ioctl(fd, BIOCIMMEDIATE, &v);
+  assert(ioctl(fd, BIOCIMMEDIATE, &v) != -1);
   // TODO handle errors
 #endif
 
@@ -111,16 +111,6 @@ Pcap::OpenOffline(const Arguments& args) {
   wrap->handle = pcap_open_offline(*fileName, pcapErrorBuffer);
   if(wrap->handle == NULL) // did we succeed?
     return ThrowException(Exception::Error(String::Concat(String::New("pcap_open_offline(): "), String::New(pcapErrorBuffer))));
-
-  // Work around buffering bug in BPF on OSX 10.6 as of May 19, 2010
-  // This may result in dropped packets under load because it disables the (broken) buffer
-  // http://seclists.org/tcpdump/2010/q1/110
-#if defined(__APPLE_CC__) || defined(__APPLE__)
-  int fd = pcap_get_selectable_fd(wrap->handle);
-  int v = 1;
-  ioctl(fd, BIOCIMMEDIATE, &v);
-  // TODO handle errors
-#endif
 
   // set non blocking mode on
   if(pcap_setnonblock(wrap->handle, 1, pcapErrorBuffer) == -1)
