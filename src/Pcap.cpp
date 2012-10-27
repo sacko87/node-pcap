@@ -80,9 +80,9 @@ Pcap::OpenOnline(const Arguments& args) {
   // This may result in dropped packets under load because it disables the (broken) buffer
   // http://seclists.org/tcpdump/2010/q1/110
 #if defined(__APPLE_CC__) || defined(__APPLE__)
-  int fd = pcap_get_selectable_fd(wrap->handle);
-  int v = 1;
-  assert(ioctl(fd, BIOCIMMEDIATE, &v) != -1);
+  int fileDescriptor = pcap_get_selectable_fd(wrap->handle);
+  int value = 1;
+  assert(ioctl(fileDescriptor, BIOCIMMEDIATE, &value) != -1);
   // TODO handle errors
 #endif
 
