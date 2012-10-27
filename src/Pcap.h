@@ -39,6 +39,7 @@ public:
   static v8::Handle<v8::Value> OpenOnline(const v8::Arguments& args);
 
 
+#if 0
   /**
     \brief Open a PCAP `savefile'.
 
@@ -46,6 +47,7 @@ public:
     \return                         Whether the capture was opened successfully.
    */
   static v8::Handle<v8::Value> OpenOffline(const v8::Arguments& args);
+#endif
 
 
   /**

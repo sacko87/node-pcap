@@ -26,7 +26,9 @@ Pcap::Init(Handle<Object> target) {
   functionTemplate->InstanceTemplate()->SetInternalFieldCount(1);
 
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "openOnline", Pcap::OpenOnline);
+#if 0
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "openOffline", Pcap::OpenOffline);
+#endif
 
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "setFilter", Pcap::SetFilter);
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "stats", Pcap::Stats);
@@ -91,6 +93,7 @@ Pcap::OpenOnline(const Arguments& args) {
   return scope.Close(True());
 }
 
+#if 0
 Handle<Value>
 Pcap::OpenOffline(const Arguments& args) {
   HandleScope scope;
@@ -118,6 +121,7 @@ Pcap::OpenOffline(const Arguments& args) {
 
   return scope.Close(True());
 }
+#endif
 
 Handle<Value>
 Pcap::SetFilter(const Arguments& args) {

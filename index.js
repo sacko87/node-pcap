@@ -46,12 +46,14 @@ exports.createOnlineSession = function(device, promisc) {
   return session;
 }
 
+/**
 exports.createOfflineSession = function(file) {
   var session = new Pcap();
   session._handle.openOffline(file);
   session.isOpen = true;
   return session;
 }
+*/
 
 exports.findAllDevices = binding.findAllDevices;
 exports.libraryVersion = binding.libraryVersion;
