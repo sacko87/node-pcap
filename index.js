@@ -26,6 +26,14 @@ Pcap.prototype.stats = function() {
   return this._handle.stats();
 }
 
+Pcap.prototype.dispatch = function(callback) {
+  this._healthCheck();
+  if(typeof callback === 'function')
+    this.on('packet', callback);
+  this._handle.dispatch();
+  this.isRunning = true;
+}
+
 Pcap.prototype.inject = function(buffer) {
   this._healthCheck();
   return this._handle.inject(buffer);

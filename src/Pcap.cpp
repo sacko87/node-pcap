@@ -32,6 +32,7 @@ Pcap::Init(Handle<Object> target) {
 
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "setFilter", Pcap::SetFilter);
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "stats", Pcap::Stats);
+  NODE_SET_PROTOTYPE_METHOD(functionTemplate, "dispatch", Pcap::Dispatch);
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "inject", Pcap::Inject);
 
   NODE_SET_PROTOTYPE_METHOD(functionTemplate, "close", Pcap::Close);
@@ -180,6 +181,16 @@ Pcap::Stats(const Arguments& args) {
 #undef X
 
   return scope.Close(StatsObject);
+}
+
+Handle<Value>
+Pcap::Dispatch(const Arguments& args) {
+  HandleScope scope;
+
+  UNWRAP(Pcap);
+  assert(wrap->handle != NULL);
+
+  return scope.Close(Undefined());
 }
 
 Handle<Value>

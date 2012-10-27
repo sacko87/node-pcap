@@ -84,6 +84,15 @@ public:
 
 
   /**
+    \brief Await and process captured packets.
+
+    \param[in] args                   The arguments passed via Node.
+    \retval v8::Handle<v8::Primitive> v8::Undefined()
+   */
+  static v8::Handle<v8::Value> Dispatch(const v8::Arguments& args);
+
+
+  /**
     \brief Close and cleanup the PCAP handle.
     
     \param[in] args                   The arguments passed via Node.
