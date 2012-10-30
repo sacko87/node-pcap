@@ -169,10 +169,10 @@ Pcap::Stats(const Arguments& args) {
   if(pcap_stats(wrap->handle, &ps) == -1) // did we succeed?
     return ThrowException(Exception::Error(String::Concat(String::New("pcap_stats(): "), String::New(pcap_geterr(wrap->handle)))));
 
-  Local<Object> StatsObject = Object::New();
+  Local<Object> statsObject = Object::New();
 
 #define X(name) \
-  StatsObject->Set(String::NewSymbol(#name), Integer::NewFromUnsigned(ps.name));
+  statsObject->Set(String::NewSymbol(#name), Integer::NewFromUnsigned(ps.name));
 
   X(ps_recv)
   X(ps_drop)
@@ -180,7 +180,7 @@ Pcap::Stats(const Arguments& args) {
 
 #undef X
 
-  return scope.Close(StatsObject);
+  return scope.Close(statsObject);
 }
 
 Handle<Value>
@@ -246,37 +246,37 @@ Pcap::FindAllDevices(const Arguments& args) {
     return ThrowException(Exception::Error(String::Concat(String::New("pcap_findalldevs(): "), String::New(pcapErrorBuffer))));
 
   // this is what will be returned
-  Local<Array> DeviceArray = Array::New();
+  Local<Array> deviceArray = Array::New();
 
   int deviceIndex = 0; // so we can add a device to an incremented index
   // loop through each interface on this system
   for(currentDevice = allDevices; currentDevice != NULL; currentDevice = currentDevice->next) {
-    Local<Object> Device = Object::New(); // this device's information
+    Local<Object> device = Object::New(); // this device's information
     // add the name to the object
-    Device->Set(String::NewSymbol("name"), String::New(currentDevice->name));
+    device->Set(String::NewSymbol("name"), String::New(currentDevice->name));
     if(currentDevice->description != NULL) // if we have a description ...
       // then add it to the object
-      Device->Set(String::NewSymbol("description"), String::New(currentDevice->description));
+      device->Set(String::NewSymbol("description"), String::New(currentDevice->description));
 
     int addressIndex = 0; // so we can add an address to an incremented index
-    Local<Array> AddressArray = Array::New(); // this interface's address information
+    Local<Array> addressArray = Array::New(); // this interface's address information
     // loop though each address  on this interface
     for(pcap_addr_t *currentAddress = currentDevice->addresses; currentAddress != NULL; currentAddress = currentAddress->next) {
       // get the address family
-      int AddressFamily = currentAddress->addr->sa_family;
+      int addressFamily = currentAddress->addr->sa_family;
       // win only care (at the moment for AF_INET(6)?
-      if(AddressFamily == AF_INET || AddressFamily == AF_INET6) {
-        Local<Object> Address = Object::New(); // this addres's information
+      if(addressFamily == AF_INET || addressFamily == AF_INET6) {
+        Local<Object> address = Object::New(); // this addres's information
 
-        Handle<Value> Addr; // the object that may contain an address
+        Handle<Value> addr; // the object that may contain an address
 
 // if the given field isn't null attempt to get the string representation
 // of the address and add it to the address information object.
 #define X(name) \
         if(currentAddress->name != NULL) {\
-          Addr = Pcap::NtoP(currentAddress->name);\
-          if(Addr->IsString())\
-            Address->Set(String::NewSymbol(#name), Addr);\
+          addr = Pcap::NtoP(currentAddress->name);\
+          if(addr->IsString())\
+            address->Set(String::NewSymbol(#name), addr);\
         }
 
         X(addr)
@@ -287,22 +287,22 @@ Pcap::FindAllDevices(const Arguments& args) {
 #undef X
 
         // if we have any fields ...
-        if(Address->GetPropertyNames()->Length() > 0)
+        if(address->GetPropertyNames()->Length() > 0)
           // ... add it to the list of address interfaces
-          AddressArray->Set(Integer::New(addressIndex++), Address);
+          addressArray->Set(Integer::New(addressIndex++), address);
       }
     }
 
     // if we have any addresses ...
-    if(AddressArray->Length() > 0)
+    if(addressArray->Length() > 0)
       // ... attach it to the device
-      Device->Set(String::NewSymbol("addresses"), AddressArray);
+      device->Set(String::NewSymbol("addresses"), addressArray);
 
     // add the device to the device array
-    DeviceArray->Set(Integer::New(deviceIndex++), Device);
+    deviceArray->Set(Integer::New(deviceIndex++), device);
   }
 
-  return scope.Close(DeviceArray);
+  return scope.Close(deviceArray);
 }
 
 Handle<Value>
