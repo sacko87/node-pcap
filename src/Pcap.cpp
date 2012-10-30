@@ -5,6 +5,7 @@
 # include <sys/ioctl.h>
 #endif
 
+#include <string.h>
 #include <pcap/pcap.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
