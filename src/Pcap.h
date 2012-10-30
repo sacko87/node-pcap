@@ -2,6 +2,8 @@
 #define _NODE_PCAP_H
 
 #define BUILDING_NODE_EXTENSION
+
+#include <uv.h>
 #include <node.h>
 
 struct pcap;
@@ -11,7 +13,7 @@ struct sockaddr;
   \class Pcap "Pcap.h"
   \brief Node bindings for PCAP.
  */
-class Pcap : node::ObjectWrap {
+class Pcap : public node::ObjectWrap {
 public:
   /**
     \brief Actually bind these functions to Node.
@@ -132,6 +134,24 @@ private:
     \brief A PCAP handle.
    */
   struct pcap *handle;
+
+
+  /**
+    \brief A handle to poll for packets (online only).
+   */
+  uv_poll_t handlePoll;
+
+
+  /**
+
+   */
+  static void PollCb(uv_poll_t *handle, int status, int events);
+
+
+  /**
+
+   */
+  static void DispatchCb(unsigned char *user, const struct pcap_pkthdr *h, const unsigned char *bytes);
 
 
   /**

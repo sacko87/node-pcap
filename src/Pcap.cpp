@@ -7,11 +7,75 @@
 
 #include <pcap/pcap.h>
 #include <netinet/in.h>
+#include <netinet/ip.h>
+#include <net/ethernet.h>
 
 #include <node_buffer.h>
+#include <slab_allocator.h>
 
 using namespace v8;
 using namespace node;
+
+#define SLAB_SIZE (1024 * 1024)
+static SlabAllocator *slabAllocator;
+static void DeleteSlabAllocator(void*) {
+  delete slabAllocator;
+  slabAllocator = NULL;
+}
+
+Persistent<String> onpacket;
+
+void
+Pcap::PollCb(uv_poll_t *handle, int status, int events) {
+  Pcap *wrap = reinterpret_cast<Pcap*>(handle->data);
+  if(status == 0 && (events & UV_READABLE) == UV_READABLE) {
+    int dispatchReturn = pcap_dispatch(wrap->handle, -1, DispatchCb, (unsigned char*) wrap);
+    if(dispatchReturn == -1) {
+      // TODO handle error (I could do with handling 2)
+    }
+  }
+}
+
+void
+Pcap::DispatchCb(unsigned char *user, const struct pcap_pkthdr *h, const unsigned char *bytes) {
+  Pcap *wrap = reinterpret_cast<Pcap*>(user);
+  char *buffer = slabAllocator->Allocate(wrap->handle_, h->caplen);
+  uv_buf_t buf = uv_buf_init(buffer, h->caplen);
+
+  memcpy(buf.base, bytes, h->caplen);
+
+  Local<Object> slab = slabAllocator->Shrink(wrap->handle_, buffer, h->caplen); 
+
+  Local<Object> packetTimeInformation = Object::New();
+
+#define X(name) \
+  packetTimeInformation->Set(String::NewSymbol(#name), Integer::NewFromUnsigned(h->ts.name));
+
+  X(tv_sec)
+  X(tv_usec)
+
+#undef X
+
+  Local<Object> packetHeader = Object::New();
+
+#define X(name) \
+  packetHeader->Set(String::NewSymbol(#name), Integer::NewFromUnsigned(h->name));
+
+  X(caplen)
+  X(len)
+  packetHeader->Set(String::NewSymbol("ts"), packetTimeInformation);
+
+#undef X
+
+  Local<Value> argv[] = {
+    Local<Object>::New(wrap->handle_),
+    slab,
+    Integer::NewFromUnsigned(buf.base - Buffer::Data(slab)),
+    Integer::NewFromUnsigned(h->caplen),
+    packetHeader
+  };
+  MakeCallback(wrap->handle_, onpacket, ARRAY_SIZE(argv), argv);
+}
 
 Pcap::Pcap() :
   handle(NULL)
@@ -20,6 +84,11 @@ Pcap::Pcap() :
 void
 Pcap::Init(Handle<Object> target) {
   HandleScope scope;
+
+  slabAllocator = new SlabAllocator(SLAB_SIZE);
+  AtExit(DeleteSlabAllocator, NULL);
+
+  onpacket = NODE_PSYMBOL("onpacket");
 
   Local<FunctionTemplate> functionTemplate = FunctionTemplate::New(Pcap::New);
   functionTemplate->SetClassName(String::NewSymbol("Pcap"));
@@ -73,7 +142,7 @@ Pcap::OpenOnline(const Arguments& args) {
   }
       
   // attempt to open the live capture
-  wrap->handle = pcap_open_live(*deviceName, BUFSIZ, promiscMode, 1000, pcapErrorBuffer);
+  wrap->handle = pcap_open_live(*deviceName, ETHER_MAX_LEN, promiscMode, 1000, pcapErrorBuffer);
   if(wrap->handle == NULL) // did we succeed?
     return ThrowException(Exception::Error(String::Concat(String::New("pcap_open_online(): "), String::New(pcapErrorBuffer))));
 
@@ -190,6 +259,17 @@ Pcap::Dispatch(const Arguments& args) {
   UNWRAP(Pcap);
   assert(wrap->handle != NULL);
 
+  int fileDescriptor = pcap_fileno(wrap->handle);
+  if(fileDescriptor != -1) {
+    uv_poll_init(uv_default_loop(), &wrap->handlePoll, fileDescriptor);
+    wrap->handlePoll.data = wrap;
+    uv_poll_start(&wrap->handlePoll, UV_READABLE, PollCb);
+#if 0
+  } else {
+    // TODO offline mode!
+#endif
+  }
+  
   return scope.Close(Undefined());
 }
 
@@ -225,6 +305,9 @@ Pcap::Close(const Arguments& args) {
 
   UNWRAP(Pcap);
   assert(wrap->handle != NULL);
+
+  if(pcap_fileno(wrap->handle) != -1)
+    uv_poll_stop(&wrap->handlePoll);
 
   // close it preventing anything else.
   pcap_close(wrap->handle); wrap->handle = NULL;

@@ -1,10 +1,17 @@
 var events = require('events');
 var binding = require('./build/Release/pcap');
 
+function onPacket(handle, slab, start, len, pktinfo) {
+  var self = handle.owner;
+  if(!slab) return self.emit('error');
+  self.emit('packet', slab.slice(start, start + len), pktinfo);
+}
+
 function Pcap() {
   events.EventEmitter.call(this);
   this._handle = new binding.Pcap();
   this._handle.owner = this;
+  this._handle.onpacket = onPacket;
   this.isOpen = false;
   this.isLive = false; 
 }
