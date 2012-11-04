@@ -1,0 +1,10 @@
+{
+  "name": "node-pcap",
+  "version": "0.1.0",
+  "description": "raw packet capture",
+  "author": "John T. Saxon <jts@sacko.co.uk>",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/sacko87/node-pcap.git"
+  }
+}

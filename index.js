@@ -71,4 +71,17 @@ exports.createOfflineSession = function(file) {
 */
 
 exports.findAllDevices = binding.findAllDevices;
-exports.libraryVersion = binding.libraryVersion;
+
+exports.libraryVersion = function() {
+  // get the library version for the first time
+  libraryVersion = binding.libraryVersion();
+
+  // override the libraryVersion() function
+  // to simply return the text provided by the binding
+  // there is no need to call C++ again for this instance
+  exports.libraryVersion = function() {
+    return libraryVersion;
+  }
+
+  return libraryVersion;
+}
