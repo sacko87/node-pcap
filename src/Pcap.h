@@ -1,7 +1,9 @@
 #ifndef _NODE_PCAP_H
 #define _NODE_PCAP_H
 
+#ifndef BUILDING_NODE_EXTENSION
 #define BUILDING_NODE_EXTENSION
+#endif
 
 #include <uv.h>
 #include <node.h>
